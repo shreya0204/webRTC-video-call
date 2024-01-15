@@ -2,9 +2,12 @@ import React from 'react';
 
 const Home = () => {
     return (
-        <div>
-            <h1>Home Page</h1>
-            <p>This is the home page.</p>
+        <div className='home_container'>
+            <div className='home_input__container'>
+                <input type="email" placeholder="Enter your email address" />
+                <input type="text" placeholder="Enter room code" />
+                <button className='home_enter_button'>Enter Room</button>
+            </div>
         </div>
     );
 }
