@@ -7,6 +7,7 @@ const RoomPage = () => {
     const { socket } = useSocket();
     const { peer, createOffer, createAnswer, setRemoteAns, sendStream, remoteStream } = usePeer();
     const [myStream, setMyStream] = useState(null);
+    const [remoteEmailId, setRemoteEmailId] = useState();
 
 
     const handleNewUserJoined = useCallback(
@@ -15,6 +16,7 @@ const RoomPage = () => {
             console.log("New user joined with email " + emailId);
             const offer = await createOffer();
             socket.emit("call-user", { emailId, offer });
+            setRemoteEmailId(emailId);
         },
         [createOffer, socket]
     );
@@ -23,7 +25,8 @@ const RoomPage = () => {
         const { from, offer } = data;
         console.log("Incoming call from " + from + " to " + offer);
         const ans = await createAnswer(offer);
-        socket.emit("call-accepted", { emailId: from, ans })
+        socket.emit("call-accepted", { emailId: from, ans });
+        setRemoteEmailId(from);
     }, [createAnswer, socket]);
 
     const handleCallAccepted = useCallback(async (data) => {
@@ -35,6 +38,12 @@ const RoomPage = () => {
     const getUserMediaStream = useCallback(async () => {
         const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
         setMyStream(stream);
+    }, []);
+
+
+    const handleNegotiationNeededEvent = useCallback(() => {
+        const localOffer = peer.localSecription;
+        socket.emit("call-user", { emailId: remoteEmailId, offer: localOffer });
     }, []);
 
     useEffect(() => {
@@ -50,6 +59,12 @@ const RoomPage = () => {
         }
     }, [handleCallAccepted, handleIncomingCall, handleNewUserJoined, socket])
 
+    useEffect(() => {
+        peer.addEventListener('negotiationneeded', handleNegotiationNeededEvent);
+        return () => {
+            peer.removeEventListener('negotiationneeded', handleNegotiationNeededEvent);
+        }
+    }, [handleNegotiationNeededEvent, peer])
 
     useEffect(() => {
         getUserMediaStream();
@@ -58,6 +73,7 @@ const RoomPage = () => {
     return (
         <div>
             <h1>Room Page</h1>
+            <h2>You are connected to : {remoteEmailId}</h2>
             <button onClick={e => sendStream(myStream)}>Send My Video</button>
             <ReactPlayer url={myStream} playing muted />
             <ReactPlayer url={remoteStream} playing />
